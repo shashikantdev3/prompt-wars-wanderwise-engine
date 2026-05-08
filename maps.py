@@ -56,7 +56,8 @@ def find_place(query: str, near: Optional[str] = None) -> Optional[dict]:
         # Compose a contextual query: "Anjuna Beach, Goa" beats "Anjuna Beach".
         composed = f"{query}, {near}" if near else query
 
-        # find_place returns candidates; we ask for the fields we need.
+        # find_place returns candidates; ask only for fields the legacy API supports.
+        # (wheelchair_accessible_entrance is a Places API New-only field.)
         response = _CLIENT.find_place(
             input=composed,
             input_type="textquery",
@@ -66,7 +67,6 @@ def find_place(query: str, near: Optional[str] = None) -> Optional[dict]:
                 "formatted_address",
                 "geometry/location",
                 "opening_hours",
-                "wheelchair_accessible_entrance",
             ],
         )
 
@@ -81,7 +81,7 @@ def find_place(query: str, near: Optional[str] = None) -> Optional[dict]:
             "formatted_address": top.get("formatted_address"),
             "latitude": loc.get("lat"),
             "longitude": loc.get("lng"),
-            "is_accessible": top.get("wheelchair_accessible_entrance"),
+            "is_accessible": None,  # not exposed by legacy Places API
             "open_now": (top.get("opening_hours") or {}).get("open_now"),
         }
     except googlemaps.exceptions.ApiError as exc:
