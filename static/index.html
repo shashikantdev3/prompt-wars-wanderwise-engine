@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>WanderWise — AI Travel Planning</title>
-<meta name="description" content="Plan dynamic trips with preferences, constraints, and real-time updates. Built with Gemini.">
+<meta name="description" content="Plan dynamic trips with preferences, constraints, and real-time updates. Built with Gemini and Google Maps.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
@@ -18,6 +18,7 @@
     --muted: #8A9BB0;
     --rule: #2E3D52;
     --error: #FF6B6B;
+    --warn:  #FFB74D;
   }
   * { box-sizing: border-box; margin: 0; padding: 0; }
   html, body {
@@ -27,15 +28,16 @@
     min-height: 100vh;
     line-height: 1.5;
   }
-  .container { max-width: 800px; margin: 0 auto; padding: 32px 20px; }
+  .container { max-width: 820px; margin: 0 auto; padding: 32px 20px; }
   header { border-bottom: 1px solid var(--rule); padding-bottom: 16px; margin-bottom: 24px; }
   header h1 { font-size: 28px; font-weight: 800; color: var(--yellow); }
   header p { color: var(--muted); font-size: 14px; margin-top: 4px; }
-  form {
+
+  form, .refine-card {
     background: var(--content-bg);
     border-radius: 8px;
-    padding: 24px;
-    margin-bottom: 24px;
+    padding: 22px;
+    margin-bottom: 18px;
   }
   fieldset { border: 0; }
   legend {
@@ -83,16 +85,25 @@
     width: 100%;
     margin-top: 8px;
   }
+  button.secondary {
+    background: transparent;
+    color: var(--cyan);
+    border: 1.5px solid var(--cyan);
+  }
+  button.secondary:hover { background: var(--cyan); color: var(--navy); }
   button:hover { background: #FFD93D; }
   button:focus-visible { outline: 3px solid var(--cyan); outline-offset: 2px; }
   button:disabled { background: var(--muted); cursor: not-allowed; }
-  #status {
+  #status, #refine-status {
     margin-top: 12px;
     color: var(--muted);
     font-size: 13px;
     min-height: 20px;
   }
-  #status[data-type="error"] { color: var(--error); font-weight: 600; }
+  #status[data-type="error"], #refine-status[data-type="error"] {
+    color: var(--error);
+    font-weight: 600;
+  }
   .results { margin-top: 16px; }
   .summary {
     background: var(--yellow);
@@ -103,6 +114,27 @@
     font-weight: 700;
     font-size: 14px;
   }
+  .violations {
+    background: var(--content-bg);
+    border-left: 3px solid var(--warn);
+    border-radius: 6px;
+    padding: 12px 16px;
+    margin-bottom: 12px;
+  }
+  .violations h4 {
+    color: var(--warn);
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 6px;
+  }
+  .violations ul { list-style: none; padding: 0; }
+  .violations li {
+    color: var(--white);
+    font-size: 12.5px;
+    padding: 3px 0;
+  }
+  .violations li.blocker { color: var(--error); }
   .day {
     background: var(--content-bg);
     border-left: 3px solid var(--cyan);
@@ -127,13 +159,58 @@
   .activity .time { color: var(--cyan); font-weight: 700; font-size: 13px; }
   .activity .what { color: var(--white); font-weight: 600; }
   .activity .where { color: var(--muted); font-size: 13px; }
+  .activity .where a {
+    color: var(--cyan);
+    text-decoration: none;
+    border-bottom: 1px dotted var(--cyan);
+  }
+  .activity .where a:hover { color: var(--yellow); border-bottom-color: var(--yellow); }
   .activity .cost { color: var(--yellow); font-size: 13px; font-weight: 600; }
+  .activity .accessible {
+    display: inline-block;
+    background: var(--cyan);
+    color: var(--navy);
+    font-size: 10px;
+    font-weight: 700;
+    padding: 1px 6px;
+    border-radius: 3px;
+    margin-left: 6px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
   .activity .notes {
     color: var(--muted);
     font-size: 12px;
     font-style: italic;
     margin-top: 4px;
   }
+  .refine-card { display: none; }
+  .refine-card.visible { display: block; }
+  .refine-card legend { color: var(--yellow); }
+  .refine-examples {
+    color: var(--muted);
+    font-size: 12px;
+    margin-top: 6px;
+    line-height: 1.5;
+  }
+  .badges {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-bottom: 12px;
+  }
+  .badge {
+    background: var(--content-bg);
+    border: 1px solid var(--rule);
+    color: var(--muted);
+    font-size: 11px;
+    padding: 4px 10px;
+    border-radius: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+  .badge.on { color: var(--cyan); border-color: var(--cyan); }
+
   footer {
     text-align: center;
     color: var(--muted);
@@ -149,7 +226,7 @@
 <main class="container">
   <header>
     <h1>WanderWise</h1>
-    <p>Plan dynamic trips with preferences, constraints, and real-time updates.</p>
+    <p>Plan dynamic trips with preferences, constraints, and real-time updates. Powered by Gemini and Google Maps Platform.</p>
   </header>
 
   <form id="plan-form" aria-label="Travel plan request">
@@ -187,34 +264,100 @@
     </fieldset>
   </form>
 
+  <section id="badges" class="badges" aria-hidden="true"></section>
   <section id="results" class="results" aria-live="polite" aria-label="Generated itinerary"></section>
 
+  <form id="refine-form" class="refine-card" aria-label="Refine itinerary">
+    <fieldset>
+      <legend>Refine this plan</legend>
+      <div class="field">
+        <label for="instruction">Tell WanderWise how to revise the plan</label>
+        <textarea id="instruction" name="instruction" rows="2" required aria-required="true" placeholder="e.g., make day 2 cheaper / swap the temple, mom can't climb stairs / shorter day 1"></textarea>
+        <div class="refine-examples">Try: "make day 2 cheaper" · "swap any non-vegetarian places" · "what if it rains on day 3?" · "tighter day 1 schedule"</div>
+      </div>
+      <button type="submit" id="refine-btn" class="secondary">Refine plan</button>
+      <div id="refine-status" role="status" aria-live="polite"></div>
+    </fieldset>
+  </form>
+
   <footer>
-    Built with Gemini, FastAPI, and Cloud Run · #PromptWars Gurgaon · DevWithData
+    Built with Gemini, Google Maps Platform, FastAPI, and Cloud Run · #PromptWars Gurgaon · DevWithData
   </footer>
 </main>
 
 <script>
-const form = document.getElementById('plan-form');
-const status = document.getElementById('status');
-const results = document.getElementById('results');
-const submitBtn = document.getElementById('submit-btn');
+const form          = document.getElementById('plan-form');
+const refineForm    = document.getElementById('refine-form');
+const status        = document.getElementById('status');
+const refineStatus  = document.getElementById('refine-status');
+const results       = document.getElementById('results');
+const badges        = document.getElementById('badges');
+const submitBtn     = document.getElementById('submit-btn');
+const refineBtn     = document.getElementById('refine-btn');
 
-function setStatus(msg, type) {
-  status.textContent = msg;
-  if (type) status.dataset.type = type; else delete status.dataset.type;
+let currentSessionId = null;
+
+function setStatus(node, msg, type) {
+  node.textContent = msg;
+  if (type) node.dataset.type = type; else delete node.dataset.type;
 }
-
 function formatINR(n) {
   return '₹' + Number(n).toLocaleString('en-IN');
 }
-
 function escapeHTML(s) {
   return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 }
 
+function renderBadges(data) {
+  badges.innerHTML = '';
+  const items = [];
+  items.push({ label: 'Gemini', on: true });
+  items.push({ label: data.maps_enriched ? 'Maps · grounded' : 'Maps · skipped', on: !!data.maps_enriched });
+  items.push({ label: `${data.days.length}-day plan`, on: true });
+  items.push({ label: data.session_id ? 'Refinable' : 'Static', on: !!data.session_id });
+  items.forEach(i => {
+    const b = document.createElement('span');
+    b.className = 'badge' + (i.on ? ' on' : '');
+    b.textContent = i.label;
+    badges.appendChild(b);
+  });
+}
+
+function renderViolations(violations) {
+  if (!violations || violations.length === 0) return null;
+  const wrap = document.createElement('div');
+  wrap.className = 'violations';
+  const heading = document.createElement('h4');
+  heading.textContent = 'Heads up — possible constraint issues';
+  wrap.appendChild(heading);
+  const ul = document.createElement('ul');
+  violations.forEach(v => {
+    const li = document.createElement('li');
+    if (v.severity === 'blocker') li.className = 'blocker';
+    li.textContent = `[${v.type}] ${v.message}`;
+    ul.appendChild(li);
+  });
+  wrap.appendChild(ul);
+  return wrap;
+}
+
+function mapsLink(activity) {
+  if (activity.place_id) {
+    return `https://www.google.com/maps/place/?q=place_id:${encodeURIComponent(activity.place_id)}`;
+  }
+  if (activity.latitude != null && activity.longitude != null) {
+    return `https://www.google.com/maps/search/?api=1&query=${activity.latitude},${activity.longitude}`;
+  }
+  return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(activity.location)}`;
+}
+
 function renderResults(data) {
   results.innerHTML = '';
+  renderBadges(data);
+
+  const violationBlock = renderViolations(data.constraint_violations);
+  if (violationBlock) results.appendChild(violationBlock);
+
   const summary = document.createElement('div');
   summary.className = 'summary';
   summary.textContent = `${data.destination} · ${data.start_date} → ${data.end_date} · Total: ${formatINR(data.total_estimated_cost_inr)} (budget ${formatINR(data.budget_inr)})`;
@@ -230,10 +373,15 @@ function renderResults(data) {
     d.activities.forEach(a => {
       const act = document.createElement('div');
       act.className = 'activity';
+      const accessibleBadge = a.is_accessible === true
+        ? '<span class="accessible" title="Wheelchair accessible">accessible</span>'
+        : '';
+      const link = mapsLink(a);
+      const where = a.formatted_address || a.location;
       const notesHtml = a.notes ? `<div class="notes">${escapeHTML(a.notes)}</div>` : '';
       act.innerHTML = `
-        <div><span class="time">${escapeHTML(a.time)}</span> · <span class="what">${escapeHTML(a.activity)}</span></div>
-        <div class="where">${escapeHTML(a.location)}</div>
+        <div><span class="time">${escapeHTML(a.time)}</span> · <span class="what">${escapeHTML(a.activity)}</span>${accessibleBadge}</div>
+        <div class="where"><a href="${escapeHTML(link)}" target="_blank" rel="noopener">${escapeHTML(where)}</a></div>
         <div class="cost">${formatINR(a.estimated_cost_inr)}</div>
         ${notesHtml}
       `;
@@ -241,13 +389,21 @@ function renderResults(data) {
     });
     results.appendChild(day);
   });
+
+  // Show refine UI now that we have a session
+  if (data.session_id) {
+    currentSessionId = data.session_id;
+    refineForm.classList.add('visible');
+  }
 }
 
 form.addEventListener('submit', async (e) => {
   e.preventDefault();
   results.innerHTML = '';
+  badges.innerHTML = '';
+  refineForm.classList.remove('visible');
   submitBtn.disabled = true;
-  setStatus('Planning your trip…');
+  setStatus(status, 'Planning your trip…');
 
   const fd = new FormData(form);
   const payload = {
@@ -270,11 +426,42 @@ form.addEventListener('submit', async (e) => {
     }
     const data = await res.json();
     renderResults(data);
-    setStatus(`Itinerary ready — ${data.days.length} day(s).`);
+    setStatus(status, `Itinerary ready — ${data.days.length} day(s). Scroll down to refine.`);
   } catch (err) {
-    setStatus(err.message || 'Something went wrong.', 'error');
+    setStatus(status, err.message || 'Something went wrong.', 'error');
   } finally {
     submitBtn.disabled = false;
+  }
+});
+
+refineForm.addEventListener('submit', async (e) => {
+  e.preventDefault();
+  if (!currentSessionId) {
+    setStatus(refineStatus, 'No active session. Please plan a trip first.', 'error');
+    return;
+  }
+  refineBtn.disabled = true;
+  setStatus(refineStatus, 'Revising your itinerary…');
+
+  const instruction = document.getElementById('instruction').value;
+
+  try {
+    const res = await fetch('/api/refine', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ session_id: currentSessionId, instruction }),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ detail: 'Unknown error' }));
+      throw new Error(err.detail || `HTTP ${res.status}`);
+    }
+    const data = await res.json();
+    renderResults(data);
+    setStatus(refineStatus, 'Plan updated.');
+  } catch (err) {
+    setStatus(refineStatus, err.message || 'Refinement failed.', 'error');
+  } finally {
+    refineBtn.disabled = false;
   }
 });
 </script>

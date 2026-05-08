@@ -1,0 +1,35 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+.Python
+venv/
+.venv/
+env/
+*.egg-info/
+
+# Tests aren't needed in production image
+tests/
+pytest.ini
+.pytest_cache/
+
+# Git
+.git/
+.gitignore
+
+# Env (secrets injected by Cloud Run)
+.env
+.env.local
+
+# IDE
+.vscode/
+.idea/
+.claude/
+
+# Docs
+README.md
+runtime.txt
+
+# OS
+.DS_Store
+Thumbs.db
