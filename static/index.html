@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>WanderWise — AI Travel Planning</title>
+<meta name="description" content="Plan dynamic trips with preferences, constraints, and real-time updates. Built with Gemini.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --navy: #0A1628;
+    --content-bg: #1E2A3A;
+    --yellow: #F2C811;
+    --cyan: #00B7C3;
+    --white: #FFFFFF;
+    --muted: #8A9BB0;
+    --rule: #2E3D52;
+    --error: #FF6B6B;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body {
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    background: var(--navy);
+    color: var(--white);
+    min-height: 100vh;
+    line-height: 1.5;
+  }
+  .container { max-width: 800px; margin: 0 auto; padding: 32px 20px; }
+  header { border-bottom: 1px solid var(--rule); padding-bottom: 16px; margin-bottom: 24px; }
+  header h1 { font-size: 28px; font-weight: 800; color: var(--yellow); }
+  header p { color: var(--muted); font-size: 14px; margin-top: 4px; }
+  form {
+    background: var(--content-bg);
+    border-radius: 8px;
+    padding: 24px;
+    margin-bottom: 24px;
+  }
+  fieldset { border: 0; }
+  legend {
+    font-size: 12px;
+    color: var(--cyan);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    font-weight: 700;
+    margin-bottom: 12px;
+  }
+  .field { margin-bottom: 16px; }
+  label {
+    display: block;
+    font-size: 13px;
+    color: var(--white);
+    margin-bottom: 6px;
+    font-weight: 600;
+  }
+  input, textarea {
+    width: 100%;
+    padding: 10px 12px;
+    background: var(--navy);
+    color: var(--white);
+    border: 1px solid var(--rule);
+    border-radius: 6px;
+    font-family: inherit;
+    font-size: 14px;
+  }
+  input:focus, textarea:focus {
+    outline: 2px solid var(--yellow);
+    outline-offset: 2px;
+    border-color: var(--yellow);
+  }
+  .row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  button {
+    background: var(--yellow);
+    color: var(--navy);
+    border: none;
+    padding: 12px 20px;
+    border-radius: 6px;
+    font-family: inherit;
+    font-size: 14px;
+    font-weight: 700;
+    cursor: pointer;
+    width: 100%;
+    margin-top: 8px;
+  }
+  button:hover { background: #FFD93D; }
+  button:focus-visible { outline: 3px solid var(--cyan); outline-offset: 2px; }
+  button:disabled { background: var(--muted); cursor: not-allowed; }
+  #status {
+    margin-top: 12px;
+    color: var(--muted);
+    font-size: 13px;
+    min-height: 20px;
+  }
+  #status[data-type="error"] { color: var(--error); font-weight: 600; }
+  .results { margin-top: 16px; }
+  .summary {
+    background: var(--yellow);
+    color: var(--navy);
+    border-radius: 6px;
+    padding: 14px 16px;
+    margin-bottom: 12px;
+    font-weight: 700;
+    font-size: 14px;
+  }
+  .day {
+    background: var(--content-bg);
+    border-left: 3px solid var(--cyan);
+    border-radius: 6px;
+    padding: 14px 18px;
+    margin-bottom: 10px;
+  }
+  .day h3 {
+    color: var(--yellow);
+    font-size: 16px;
+    font-weight: 700;
+    margin-bottom: 4px;
+  }
+  .day .theme {
+    color: var(--muted);
+    font-size: 13px;
+    font-style: italic;
+    margin-bottom: 12px;
+  }
+  .activity { padding: 8px 0; border-top: 1px solid var(--rule); }
+  .activity:first-of-type { border-top: 0; padding-top: 0; }
+  .activity .time { color: var(--cyan); font-weight: 700; font-size: 13px; }
+  .activity .what { color: var(--white); font-weight: 600; }
+  .activity .where { color: var(--muted); font-size: 13px; }
+  .activity .cost { color: var(--yellow); font-size: 13px; font-weight: 600; }
+  .activity .notes {
+    color: var(--muted);
+    font-size: 12px;
+    font-style: italic;
+    margin-top: 4px;
+  }
+  footer {
+    text-align: center;
+    color: var(--muted);
+    font-size: 12px;
+    margin-top: 32px;
+    padding-top: 16px;
+    border-top: 1px solid var(--rule);
+  }
+  @media (max-width: 480px) { .row { grid-template-columns: 1fr; } }
+</style>
+</head>
+<body>
+<main class="container">
+  <header>
+    <h1>WanderWise</h1>
+    <p>Plan dynamic trips with preferences, constraints, and real-time updates.</p>
+  </header>
+
+  <form id="plan-form" aria-label="Travel plan request">
+    <fieldset>
+      <legend>Trip details</legend>
+
+      <div class="field">
+        <label for="destination">Destination</label>
+        <input id="destination" name="destination" type="text" required aria-required="true" autocomplete="off" placeholder="e.g., Goa">
+      </div>
+
+      <div class="row">
+        <div class="field">
+          <label for="start_date">Start date</label>
+          <input id="start_date" name="start_date" type="date" required aria-required="true">
+        </div>
+        <div class="field">
+          <label for="end_date">End date</label>
+          <input id="end_date" name="end_date" type="date" required aria-required="true">
+        </div>
+      </div>
+
+      <div class="field">
+        <label for="budget_inr">Budget (INR)</label>
+        <input id="budget_inr" name="budget_inr" type="number" min="1" max="10000000" required aria-required="true" placeholder="e.g., 15000">
+      </div>
+
+      <div class="field">
+        <label for="preferences">Preferences and constraints</label>
+        <textarea id="preferences" name="preferences" rows="3" required aria-required="true" placeholder="e.g., vegetarian, prefer offbeat over touristy, mom uses a cane"></textarea>
+      </div>
+
+      <button type="submit" id="submit-btn">Plan my trip</button>
+      <div id="status" role="status" aria-live="polite"></div>
+    </fieldset>
+  </form>
+
+  <section id="results" class="results" aria-live="polite" aria-label="Generated itinerary"></section>
+
+  <footer>
+    Built with Gemini, FastAPI, and Cloud Run · #PromptWars Gurgaon · DevWithData
+  </footer>
+</main>
+
+<script>
+const form = document.getElementById('plan-form');
+const status = document.getElementById('status');
+const results = document.getElementById('results');
+const submitBtn = document.getElementById('submit-btn');
+
+function setStatus(msg, type) {
+  status.textContent = msg;
+  if (type) status.dataset.type = type; else delete status.dataset.type;
+}
+
+function formatINR(n) {
+  return '₹' + Number(n).toLocaleString('en-IN');
+}
+
+function escapeHTML(s) {
+  return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+function renderResults(data) {
+  results.innerHTML = '';
+  const summary = document.createElement('div');
+  summary.className = 'summary';
+  summary.textContent = `${data.destination} · ${data.start_date} → ${data.end_date} · Total: ${formatINR(data.total_estimated_cost_inr)} (budget ${formatINR(data.budget_inr)})`;
+  results.appendChild(summary);
+
+  data.days.forEach(d => {
+    const day = document.createElement('article');
+    day.className = 'day';
+    day.innerHTML = `
+      <h3>Day ${d.day_number} — ${escapeHTML(d.date)}</h3>
+      <div class="theme">${escapeHTML(d.theme)}</div>
+    `;
+    d.activities.forEach(a => {
+      const act = document.createElement('div');
+      act.className = 'activity';
+      const notesHtml = a.notes ? `<div class="notes">${escapeHTML(a.notes)}</div>` : '';
+      act.innerHTML = `
+        <div><span class="time">${escapeHTML(a.time)}</span> · <span class="what">${escapeHTML(a.activity)}</span></div>
+        <div class="where">${escapeHTML(a.location)}</div>
+        <div class="cost">${formatINR(a.estimated_cost_inr)}</div>
+        ${notesHtml}
+      `;
+      day.appendChild(act);
+    });
+    results.appendChild(day);
+  });
+}
+
+form.addEventListener('submit', async (e) => {
+  e.preventDefault();
+  results.innerHTML = '';
+  submitBtn.disabled = true;
+  setStatus('Planning your trip…');
+
+  const fd = new FormData(form);
+  const payload = {
+    destination: fd.get('destination'),
+    start_date: fd.get('start_date'),
+    end_date: fd.get('end_date'),
+    budget_inr: parseInt(fd.get('budget_inr'), 10),
+    preferences: fd.get('preferences'),
+  };
+
+  try {
+    const res = await fetch('/api/plan', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ detail: 'Unknown error' }));
+      throw new Error(err.detail || `HTTP ${res.status}`);
+    }
+    const data = await res.json();
+    renderResults(data);
+    setStatus(`Itinerary ready — ${data.days.length} day(s).`);
+  } catch (err) {
+    setStatus(err.message || 'Something went wrong.', 'error');
+  } finally {
+    submitBtn.disabled = false;
+  }
+});
+</script>
+</body>
+</html>
